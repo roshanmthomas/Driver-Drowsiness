@@ -1,78 +1,45 @@
-import os
-import av
-import threading
+import cv2
 import streamlit as st
-import streamlit_nested_layout
-from streamlit_webrtc import VideoHTMLAttributes, webrtc_streamer
 
 from drowsy_detection import VideoFrameHandler
 
-
-# Define the audio file to use.
-alarm_file_path = os.path.join("audio", "wake_up.wav")
-
-# Streamlit Components
-st.set_page_config(
-    page_title="Drowsiness Detection | LearnOpenCV",
-    page_icon="https://learnopencv.com/wp-content/uploads/2017/12/favicon.png",
-    layout="wide",  # centered, wide
-    initial_sidebar_state="expanded",
-)
-
-
-col1, col2 = st.columns(spec=[6, 2], gap="medium")
-
-with col1:
-    st.title("Drowsiness Detection!!!")
-    with st.container():
-        c1, c2 = st.columns(spec=[1, 1])
-        with c1:
-            # The amount of time (in seconds) to wait before sounding the alarm.
-            WAIT_TIME = st.slider("Seconds to wait before sounding alarm:", 0.0, 5.0, 1.0, 0.25)
-
-        with c2:
-            # Lowest valid value of Eye Aspect Ratio. Ideal values [0.15, 0.2].
-            EAR_THRESH = st.slider("Eye Aspect Ratio threshold:", 0.0, 0.4, 0.18, 0.01)
-
+# Set your desired thresholds
 thresholds = {
-    "EAR_THRESH": EAR_THRESH,
-    "WAIT_TIME": WAIT_TIME,
+    "WAIT_TIME": 2.0,  # Time to wait (in seconds) before triggering the alarm
+    "EAR_THRESH": 0.3  # Eye Aspect Ratio threshold for drowsiness detection
 }
 
-# For streamlit-webrtc
-video_handler = VideoFrameHandler()
+# Create an instance of VideoFrameHandler
+frame_handler = VideoFrameHandler()
 
-lock = threading.Lock()  # For thread-safe access & to prevent race-condition.
-shared_state = {"play_alarm": False}
+# Open the video capture
+cap = cv2.VideoCapture(0)  # You can replace 0 with the path to a video file if you want to process a video
 
+# Initialize the alarm flag
+play_alarm = False
 
-def video_frame_callback(frame: av.VideoFrame):
-    frame = frame.to_ndarray(format="bgr24")  # Decode and convert frame to RGB
+# Streamlit app title and description
+st.title("Driver Drowsiness Detection")
+st.markdown("This app detects drowsiness of a driver in real-time.")
 
-    frame, play_alarm = video_handler.process(frame, thresholds)  # Process frame
-    with lock:
-        shared_state["play_alarm"] = play_alarm  # Update shared state
+# Display the video frame and process it
+while cap.isOpened():
+    success, frame = cap.read()
+    if not success:
+        break
 
-    return av.VideoFrame.from_ndarray(frame, format="bgr24")  # Encode and return BGR frame
+    processed_frame, play_alarm = frame_handler.process(frame, thresholds)
 
+    # Display the processed frame
+    st.image(processed_frame, channels="BGR", use_column_width=True)
 
-def audio_frame_callback(frame: av.AudioFrame):
-    with lock:  # access the current “play_alarm” state
-        play_alarm = shared_state["play_alarm"]
+    # Simulate the alarm behavior
+    if play_alarm:
+        st.warning("ALERT: Drowsiness Detected!")  # Display a warning message
 
-    new_frame: av.AudioFrame = audio_handler.process(frame, play_sound=play_alarm)
-    return new_frame
+    if st.button("Quit"):
+        break
 
-
-# https://github.com/whitphx/streamlit-webrtc/blob/main/streamlit_webrtc/config.py
-
-with col1:
-    ctx = webrtc_streamer(
-        key="drowsiness-detection",
-        video_frame_callback=video_frame_callback,
-        audio_frame_callback=audio_frame_callback,
-        rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},  # Add this to config for cloud deployment.
-        media_stream_constraints={"video": {"height": {"ideal": 480}}, "audio": True},
-        video_html_attrs=VideoHTMLAttributes(autoPlay=True, controls=False, muted=False),
-    )
-
+# Release the video capture and close OpenCV windows
+cap.release()
+cv2.destroyAllWindows()
