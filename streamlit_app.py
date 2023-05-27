@@ -5,9 +5,7 @@ import streamlit as st
 import streamlit_nested_layout
 from streamlit_webrtc import VideoHTMLAttributes, webrtc_streamer
 
-from audio_handling import AudioFrameHandler
 from drowsy_detection import VideoFrameHandler
-from ads import css_string
 
 
 # Define the audio file to use.
@@ -43,7 +41,6 @@ thresholds = {
 
 # For streamlit-webrtc
 video_handler = VideoFrameHandler()
-audio_handler = AudioFrameHandler(sound_file_path=alarm_file_path)
 
 lock = threading.Lock()  # For thread-safe access & to prevent race-condition.
 shared_state = {"play_alarm": False}
@@ -79,6 +76,3 @@ with col1:
         video_html_attrs=VideoHTMLAttributes(autoPlay=True, controls=False, muted=False),
     )
 
-with col2:
-    # Banner for newsletter subscription, jobs, and consulting.
-    st.markdown(css_string, unsafe_allow_html=True)
