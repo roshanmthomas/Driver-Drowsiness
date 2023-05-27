@@ -29,7 +29,7 @@ while cap.isOpened():
         # Code to play the alarm sound
 
         # Load the alarm sound file
-        alarm_sound_path = r"R:/Project MTech/Driver-Drowsiness-detection-using-Mediapipe-in-Python/audio/wake_up.wav"
+        alarm_sound_path = r"/audio/wake_up.wav"
         pygame.mixer.music.load(alarm_sound_path)
 
         # Play the alarm sound
